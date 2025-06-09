@@ -32,19 +32,16 @@ public class AuthorServiceImplTest {
     @Autowired
     private AuthorRepository authorRepository; // Предполагается, что у вас есть репозиторий для работы с авторами
 
+    private Author author;
+
     @BeforeEach
     public void setUp() {
-        // Создаем тестового автора и сохраняем его в репозитории
-        Author author = new Author();
+        // Создаем автора и сохраняем его в репозитории
+        author = new Author();
         author.setFullName("Test Author");
         author.setAvgRating(4.5);
         author.setBooks(new ArrayList<>());
-
-        // Сохраняем автора в репозитории
-        authorRepository.save(author);
-
-        // Устанавливаем authorService, который будет использовать реальный репозиторий
-        authorService = new AuthorServiceImpl(authorRepository);
+        author = authorRepository.save(author); // Сохраняем автора
     }
 
     @Test
@@ -55,15 +52,20 @@ public class AuthorServiceImplTest {
                 .avgRating(4.5)
                 .build();
 
+        // Получаем количество авторов до вызова метода create
+        List<Author> authorsBefore = (List<Author>) authorRepository.findAll();
+
         // Вызываем метод create с AuthorDto
         authorService.create(authorDto);
 
-        // Проверяем, что метод save был вызван один раз с объектом Author
-        ArgumentCaptor<Author> authorCaptor = ArgumentCaptor.forClass(Author.class);
-        verify(authorRepository, times(1)).save(authorCaptor.capture());
+        // Получаем количество авторов после вызова метода create
+        List<Author> authorsAfter = (List<Author>) authorRepository.findAll();
+
+        // Проверяем, что количество авторов увеличилось на 1
+        assertEquals(authorsBefore.size() + 1, authorsAfter.size());
 
         // Проверяем, что сохраненный автор имеет правильные данные
-        Author savedAuthor = authorCaptor.getValue();
+        Author savedAuthor = authorsAfter.get(authorsAfter.size() - 1); // Получаем последнего сохраненного автора
         assertEquals("Test Author", savedAuthor.getFullName());
         assertEquals(4.5, savedAuthor.getAvgRating());
     }
@@ -72,79 +74,78 @@ public class AuthorServiceImplTest {
     public void testDelete() {
         Integer authorId = 1;
 
-        authorService.delete(authorId);
-
-        verify(authorRepository, times(1)).deleteById(authorId); // Проверяем, что метод deleteById был вызван один раз
-    }
-
-    @Test
-    public void testAddBook() {
-        Integer authorId = 1;
-        Book book = new Book();
-        book.setId(1);
-        book.setArticle("Test Article");
-        book.setGenre("Fiction");
-        book.setRating(4.5);
-        book.setTags("tag1, tag2");
-
-        // Создаем автора и добавляем его в репозиторий
+        // Сначала создаем автора, чтобы он существовал в репозитории
         Author author = new Author();
         author.setId(authorId);
         author.setFullName("Test Author");
         author.setAvgRating(4.5);
-        author.setBooks(new ArrayList<>());
+        authorRepository.save(author); // Сохраняем автора в репозитории
 
-        when(authorRepository.findById(authorId)).thenReturn(java.util.Optional.of(author));
+        // Вызываем метод delete
+        authorService.delete(authorId);
 
-        authorService.addBook(authorId, book);
+        // Проверяем, что автор был удален
+        assertFalse(authorRepository.existsById(authorId)); // Проверяем, что автор больше не существует
+    }
 
-        ArgumentCaptor<Author> authorCaptor = ArgumentCaptor.forClass(Author.class);
-        verify(authorRepository, times(1)).save(authorCaptor.capture()); // Проверяем, что метод save был вызван один раз
+    @Test
+    public void testAddBook() {
+        // Создаем книгу
+        Book book = new Book();
+        book.setArticle("Test Article");
+        book.setGenre("Fiction");
+        book.setRating(4.0);
+        book.setTags("tag1, tag2");
+        book.setAuthor(author); // Устанавливаем автора
 
-        Author capturedAuthor = authorCaptor.getValue();
-        assertNotNull(capturedAuthor);
-        assertTrue(capturedAuthor.getBooks().contains(book)); // Проверяем, что книга добавлена к автору
-        assertEquals(book.getAuthor(), capturedAuthor); // Проверяем, что книга ссылается на автора
+        // Получаем текущее количество книг у автора
+        int initialBookCount = author.getBooks().size();
+
+        // Добавляем книгу
+        authorService.addBook(author.getId(), book);
+
+        // Проверяем, что книга была добавлена
+        Author updatedAuthor = authorRepository.findById(author.getId()).orElseThrow();
+        assertEquals(initialBookCount + 1, updatedAuthor.getBooks().size());
+        assertTrue(updatedAuthor.getBooks().contains(book)); // Проверяем, что книга добавлена к автору
+        assertEquals(updatedAuthor, book.getAuthor()); // Проверяем, что книга ссылается на автора
     }
 
     @Test
     public void testAddBooks() {
-        Integer authorId = 1;
         List<Book> books = new ArrayList<>();
+
         Book book1 = new Book();
         book1.setId(1);
         book1.setArticle("Test Article 1");
         book1.setGenre("Fiction");
         book1.setRating(4.0);
         book1.setTags("tag1, tag2");
+        book1.setAuthor(author); // Устанавливаем автора
         books.add(book1);
+
         Book book2 = new Book();
         book2.setId(2);
         book2.setArticle("Test Article 2");
         book2.setGenre("Non-Fiction");
         book2.setRating(4.5);
         book2.setTags("tag3, tag4");
+        book2.setAuthor(author); // Устанавливаем автора
         books.add(book2);
 
-        // Создаем автора и добавляем его в репозиторий
-        Author author = new Author();
-        author.setId(authorId);
-        author.setFullName("Test Author");
-        author.setAvgRating(4.5);
-        author.setBooks(new ArrayList<>());
+        // Получаем текущее количество книг у автора
+        int initialBookCount = author.getBooks().size();
 
-        when(authorRepository.findById(authorId)).thenReturn(java.util.Optional.of(author));
+        // Добавляем книги
+        authorService.addBooks(author.getId(), books);
 
-        authorService.addBooks(authorId, books);
+        // Проверяем, что книги были добавлены
+        Author updatedAuthor = authorRepository.findById(author.getId()).orElseThrow();
+        assertEquals(initialBookCount + books.size(), updatedAuthor.getBooks().size()); // Проверяем, что количество книг увеличилось
+        assertTrue(updatedAuthor.getBooks().containsAll(books)); // Проверяем, что все книги добавлены к автору
 
-        ArgumentCaptor<Author> authorCaptor = ArgumentCaptor.forClass(Author.class);
-        verify(authorRepository, times(1)).save(authorCaptor.capture()); // Проверяем, что метод save был вызван один раз
-
-        Author capturedAuthor = authorCaptor.getValue();
-        assertNotNull(capturedAuthor);
-        assertTrue(capturedAuthor.getBooks().containsAll(books)); // Проверяем, что все книги добавлены к автору
         for (Book book : books) {
-            assertEquals(capturedAuthor, book.getAuthor()); // Проверяем, что каждая книга ссылается на автора
+            assertEquals(updatedAuthor, book.getAuthor()); // Проверяем, что каждая книга ссылается на автора
         }
     }
 

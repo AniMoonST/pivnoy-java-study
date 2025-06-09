@@ -5,5 +5,5 @@ import org.springframework.stereotype.Repository;
 import ttv.poltoraha.pivka.entity.Genre;
 
 @Repository
-public interface GenreRepository extends CrudRepository<Genre, String> {
+public interface GenreRepository extends CrudRepository<Genre, Integer> {
 }
