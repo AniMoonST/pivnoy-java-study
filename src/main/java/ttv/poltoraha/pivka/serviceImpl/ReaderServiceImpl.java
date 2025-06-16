@@ -17,12 +17,12 @@ import util.MyUtility;
 @RequiredArgsConstructor
 @Transactional
 public class ReaderServiceImpl implements ReaderService {
-    private final ReaderRepository readerRepository;
+    private final ReaderRepository quoteRepository;
     private final BookRepository bookRepository;
     @Override
     public void createQuote(String username, Integer book_id, String text) {
         val newQuote = new Quote();
-        val reader = readerRepository.findById(username)
+        val reader = quoteRepository.findById(username)
                 .orElseThrow(() -> new EntityNotFoundException("Entity reader with id = " + username + " was not found"));
         val book = bookRepository.findById(book_id)
                 .orElseThrow(() -> new EntityNotFoundException("Entity book with id = " + book_id + " was not found"));
@@ -33,12 +33,14 @@ public class ReaderServiceImpl implements ReaderService {
         reader.getQuotes().add(newQuote);
 
         // todo потенциально лучше сейвить quoteRepository. Чем меньше вложенностей у сохраняемой сущности - тем эффективнее это будет происходить.
-        readerRepository.save(reader);
+        quoteRepository.save(reader);
+        // readerRepository обычно используется для взаимодействия с подписками пользователей, их профилями и прочими похожими функциями
+        // В то время как quoteRepository нужен для изменения, добавления, удаления, получения цитат (замены жанр книг, например, их названия и прочее)
     }
 
     @Override
     public void addFinishedBook(String username, Integer bookId) {
-        val reader = MyUtility.findEntityById(readerRepository.findByUsername(username), "reader", username);
+        val reader = MyUtility.findEntityById(quoteRepository.findByUsername(username), "reader", username);
 
         val book = MyUtility.findEntityById(bookRepository.findById(bookId), "book", bookId.toString());
 
@@ -48,7 +50,7 @@ public class ReaderServiceImpl implements ReaderService {
 
         reader.getReadings().add(reading);
 
-        readerRepository.save(reader);
+        quoteRepository.save(reader);
     }
 
     @Override
@@ -57,6 +59,6 @@ public class ReaderServiceImpl implements ReaderService {
         reader.setUsername(username);
         reader.setPassword(password);
 
-        readerRepository.save(reader);
+        quoteRepository.save(reader);
     }
 }
