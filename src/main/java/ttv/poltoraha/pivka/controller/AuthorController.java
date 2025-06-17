@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.*;
 import ttv.poltoraha.pivka.dao.request.AuthorDto;
 import ttv.poltoraha.pivka.entity.Author;
 import ttv.poltoraha.pivka.entity.Book;
+import ttv.poltoraha.pivka.metrics.CustomMetrics;
 import ttv.poltoraha.pivka.service.AuthorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,50 +22,53 @@ import java.util.List;
 public class AuthorController {
     private final AuthorService authorService;
     private final Logger logger = LoggerFactory.getLogger(AuthorController.class);
-    private final MeterRegistry meterRegistry;
+    private final CustomMetrics customMetrics;
 
-    // Создаем счетчик и таймер
-    private final Counter requestCounter;
-    private final Timer dbTimer;
-
-    public AuthorController(AuthorService authorService, MeterRegistry meterRegistry) {
+    public AuthorController(AuthorService authorService, CustomMetrics customMetrics) {
         this.authorService = authorService;
-        this.meterRegistry = meterRegistry;
-        this.requestCounter = meterRegistry.counter("author_requests_count");
-        this.dbTimer = meterRegistry.timer("author_db_timer");
+        this.customMetrics = customMetrics;
     }
 
     @PostMapping("/create")
     public void createAuthor(@RequestBody AuthorDto authorDto) {
         logger.info("Received request to create author: {}", authorDto);
-        requestCounter.increment(); // Увеличиваем счетчик запросов
+        customMetrics.incrementRequestCounter(); // Увеличиваем счетчик запросов
 
-        dbTimer.record(() -> {
-            authorService.create(authorDto); // Измеряем время выполнения
+        Timer.Sample sample = customMetrics.startDbTimer(); // Начинаем измерение времени
+        try {
+            authorService.create(authorDto); // Выполняем действие
             logger.info("Successfully created author: {}", authorDto);
-        });
+        } finally {
+            customMetrics.stopDbTimer(sample); // Останавливаем таймер
+        }
     }
 
     @PostMapping("/delete")
     public void deleteAuthorById(@RequestParam Integer id) {
         logger.info("Received request to delete author with id: {}", id);
-        requestCounter.increment(); // Увеличиваем счетчик запросов
+        customMetrics.incrementRequestCounter(); // Увеличиваем счетчик запросов
 
-        dbTimer.record(() -> {
-            authorService.delete(id); // Измеряем время выполнения
+        Timer.Sample sample = customMetrics.startDbTimer(); // Начинаем измерение времени
+        try {
+            authorService.delete(id); // Выполняем действие
             logger.info("Successfully deleted author with id: {}", id);
-        });
+        } finally {
+            customMetrics.stopDbTimer(sample); // Останавливаем таймер
+        }
     }
 
     @PostMapping("/add/books")
     public void addBooksToAuthor(@RequestParam Integer id, @RequestBody List<Book> books) {
         logger.info("Received request to add books to author with id: {}", id);
         logger.info("Books to add: {}", books);
-        requestCounter.increment(); // Увеличиваем счетчик запросов
+        customMetrics.incrementRequestCounter(); // Увеличиваем счетчик запросов
 
-        dbTimer.record(() -> {
-            authorService.addBooks(id, books); // Измеряем время выполнения
+        Timer.Sample sample = customMetrics.startDbTimer(); // Начинаем измерение времени
+        try {
+            authorService.addBooks(id, books); // Выполняем действие
             logger.info("Successfully added books to author with id: {}", id);
-        });
+        } finally {
+            customMetrics.stopDbTimer(sample); // Останавливаем таймер
+        }
     }
 }
