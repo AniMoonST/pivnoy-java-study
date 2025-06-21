@@ -23,3 +23,4 @@ public interface BookRepository extends CrudRepository<Book, Integer> {
     @Query("SELECT b FROM book b WHERE b.tags LIKE %:tag% ORDER BY b.rating DESC")
     List<Book> findTop2BooksByTag(@Param("tag") String tag);
 }
+
