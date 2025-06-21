@@ -13,10 +13,12 @@ import ttv.poltoraha.pivka.service.AuthorService;
 import ttv.poltoraha.pivka.service.RecommendationService;
 import util.MyUtility;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -85,7 +87,47 @@ public class RecommendationServiceImpl implements RecommendationService {
      */
     @Override
     public List<Book> recommendBook(String username) {
-        return null;
+        // Получаем читателя по имени пользователя
+        Optional<Reader> optionalReader = readerRepository.findByUsername(username);
+
+        if (optionalReader.isEmpty()) {
+            // Если читатель не найден, можно вернуть пустой список или выбросить исключение
+            return Collections.emptyList();
+        }
+
+        Reader reader = optionalReader.get();
+
+        // Получаем список прочитанных книг
+        List<Book> readBooks = reader.getReadings().stream()
+                .map(Reading::getBook)
+                .collect(Collectors.toList());
+
+        // Извлекаем два самых популярных тега
+        val mostPopularTags = readBooks.stream()
+                .flatMap(book -> book.getTags().stream())
+                .collect(Collectors.groupingBy(tag -> tag, Collectors.counting()))
+                .entrySet()
+                .stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                .limit(2)
+                .map(Map.Entry::getKey)
+                .toList();
+
+        if (mostPopularTags.size() < 2) {
+            // Если недостаточно тегов, можно вернуть пустой список или выбросить исключение
+            return Collections.emptyList();
+        }
+
+        // Получаем книги по первому тегу с максимальным рейтингом (3 книги)
+        List<Book> topBooksByFirstTag = bookRepository.findTop3BooksByTag(mostPopularTags.get(0));
+
+        // Получаем книги по второму тегу с максимальным рейтингом (2 книги)
+        List<Book> topBooksBySecondTag = bookRepository.findTop2BooksByTag(mostPopularTags.get(1));
+
+        // Объединяем списки и убираем дубликаты
+        return Stream.concat(topBooksByFirstTag.stream(), topBooksBySecondTag.stream())
+                .distinct()
+                .toList();
     }
 
     /**
@@ -98,7 +140,7 @@ public class RecommendationServiceImpl implements RecommendationService {
      */
     @Override
     public List<Quote> recommendQuoteByBook(Integer book_id) {
-        if (bookRepository.existsById(book_id)) {
+        if (!bookRepository.existsById(book_id)) {
             throw new EntityNotFoundException(String.format("Entity book with id = %s was not found", book_id));
         }
 
