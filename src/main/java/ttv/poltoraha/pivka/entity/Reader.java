@@ -20,4 +20,30 @@ public class Reader extends MyUser {
     @OneToMany(mappedBy = "reader", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Reading> readings = new ArrayList<>();
 
+    private boolean isNew; // Флаг для определения новых пользователей
+
+    public void addQuote(Quote quote) {
+        quotes.add(quote);
+        quote.setReader(this);
+    }
+
+    public void removeQuote(Quote quote) {
+        quotes.remove(quote);
+        quote.setReader(null);
+    }
+
+    public void addReading(Reading reading) {
+        readings.add(reading);
+        reading.setReader(this);
+    }
+
+    public void removeReading(Reading reading) {
+        readings.remove(reading);
+        reading.setReader(null);
+    }
+
+    // Метод для установки флага isNew
+    public void setIsNew(boolean isNew) {
+        this.isNew = isNew;
+    }
 }
