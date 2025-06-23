@@ -9,5 +9,4 @@ import java.util.Optional;
 @Repository
 public interface ReaderRepository extends CrudRepository<Reader, String> {
     public Optional<Reader> findByUsername(String username);
-
 }

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.val;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ttv.poltoraha.pivka.entity.Book;
 import ttv.poltoraha.pivka.entity.Quote;
 import ttv.poltoraha.pivka.entity.Reader;
 import ttv.poltoraha.pivka.entity.Reading;
@@ -17,46 +18,68 @@ import util.MyUtility;
 @RequiredArgsConstructor
 @Transactional
 public class ReaderServiceImpl implements ReaderService {
-    private final ReaderRepository readerRepository;
-    private final BookRepository bookRepository;
+    private final ReaderRepository quoteRepository; // Репозиторий для работы с читателями
+    private final BookRepository bookRepository; // Репозиторий для работы с книгами
+
     @Override
-    public void createQuote(String username, Integer book_id, String text) {
-        val newQuote = new Quote();
-        val reader = readerRepository.findById(username)
-                .orElseThrow(() -> new EntityNotFoundException("Entity reader with id = " + username + " was not found"));
-        val book = bookRepository.findById(book_id)
-                .orElseThrow(() -> new EntityNotFoundException("Entity book with id = " + book_id + " was not found"));
+    public void createQuote(String username, Integer bookId, String text) {
+        // Находим читателя по имени пользователя
+        Reader reader = quoteRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Reader with username = " + username + " was not found"));
+
+        // Проверяем, является ли читатель новым
+        if (reader.isNew()) {
+            throw new IllegalStateException("New users must update their password before creating quotes.");
+        }
+
+        // Находим книгу по ID
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new EntityNotFoundException("Book with id = " + bookId + " was not found"));
+
+        // Создаем новую цитату
+        Quote newQuote = new Quote();
         newQuote.setBook(book);
         newQuote.setText(text);
         newQuote.setReader(reader);
 
-        reader.getQuotes().add(newQuote);
+        // Добавляем цитату в список читателя
+        reader.addQuote(newQuote);
 
-        // todo потенциально лучше сейвить quoteRepository. Чем меньше вложенностей у сохраняемой сущности - тем эффективнее это будет происходить.
-        readerRepository.save(reader);
+        // Сохраняем читателя, что также сохранит цитаты благодаря каскадированию
+        quoteRepository.save(reader);
     }
 
     @Override
     public void addFinishedBook(String username, Integer bookId) {
-        val reader = MyUtility.findEntityById(readerRepository.findByUsername(username), "reader", username);
+        // Находим читателя по имени пользователя
+        Reader reader = quoteRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Reader with username = " + username + " was not found"));
 
-        val book = MyUtility.findEntityById(bookRepository.findById(bookId), "book", bookId.toString());
+        // Находим книгу по ID
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new EntityNotFoundException("Book with id = " + bookId + " was not found"));
 
-        val reading = new Reading();
+        // Создаем новое чтение
+        Reading reading = new Reading();
         reading.setReader(reader);
         reading.setBook(book);
 
-        reader.getReadings().add(reading);
+        // Добавляем чтение в список читателя
+        reader.addReading(reading);
 
-        readerRepository.save(reader);
+        // Сохраняем читателя, что также сохранит чтения благодаря каскадированию
+        quoteRepository.save(reader);
     }
 
     @Override
     public void createReader(String username, String password) {
-        val reader = new Reader();
+        // Создаем нового читателя
+        Reader reader = new Reader();
         reader.setUsername(username);
         reader.setPassword(password);
+        reader.setIsNew(true); // Устанавливаем флаг для новых пользователей
 
-        readerRepository.save(reader);
+        // Сохраняем нового читателя
+        quoteRepository.save(reader);
     }
 }
