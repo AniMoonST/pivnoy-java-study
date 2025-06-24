@@ -12,6 +12,7 @@ import java.util.List;
 @ToString
 @DiscriminatorValue("READER")
 public class Reader extends MyUser {
+    private boolean isNew; // Флаг для определения новых пользователей
 
     // Тут хороший пример зачем вообще юзать каскад. В текущем виде мы сохраняем quotes через класс ReaderService и вызов
     // репозитория readerRepository. Если не установить каскад тип, то цитата просто не будет создана в бд
@@ -19,5 +20,41 @@ public class Reader extends MyUser {
     private List<Quote> quotes = new ArrayList<>();
     @OneToMany(mappedBy = "reader", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Reading> readings = new ArrayList<>();
+    @OneToMany(mappedBy = "reader", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Rating> ratings = new ArrayList<>();
 
+    public void addRating(Rating rating) {
+        ratings.add(rating);
+        rating.setReader(this);
+    }
+
+    public void removeRating(Rating rating) {
+        ratings.remove(rating);
+        rating.setReader(null);
+    }
+
+    public void addQuote(Quote quote) {
+        quotes.add(quote);
+        quote.setReader(this);
+    }
+
+    public void removeQuote(Quote quote) {
+        quotes.remove(quote);
+        quote.setReader(null);
+    }
+
+    public void addReading(Reading reading) {
+        readings.add(reading);
+        reading.setReader(this);
+    }
+
+    public void removeReading(Reading reading) {
+        readings.remove(reading);
+        reading.setReader(null);
+    }
+
+    // Метод для установки флага isNew
+    public void setIsNew(boolean isNew) {
+        this.isNew = isNew;
+    }
 }

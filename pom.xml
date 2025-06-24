@@ -77,7 +77,23 @@
 			<artifactId>spring-kafka</artifactId>
 			<version>3.3.1</version>
 		</dependency>
-<!--		Зависимости для логгирования-->
+		<!-- https://mvnrepository.com/artifact/org.springframework.kafka/spring-kafka-test -->
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka-test</artifactId>
+			<version>2.0.7.RELEASE</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+			<version>3.4.5</version>
+		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-core</artifactId>
+			<version>1.10.0</version>
+		</dependency>
     </dependencies>
 
 	<build>
