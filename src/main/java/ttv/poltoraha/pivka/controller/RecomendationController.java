@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 import ttv.poltoraha.pivka.entity.Author;
 import ttv.poltoraha.pivka.entity.Book;
-import ttv.poltoraha.pivka.entity.Quote;
+import ttv.poltoraha.pivka.entity.Rating;
 import ttv.poltoraha.pivka.service.RecommendationService;
 
 import java.util.List;
@@ -54,8 +54,8 @@ public class RecomendationController {
      * @return список подходящих цитат для книги
      */
     @GetMapping("/quotes/{bookId}")
-    public ResponseEntity<List<Quote>> recommendQuotesByBook(@PathVariable Integer bookId) {
-        List<Quote> quotes = recommendationService.recommendQuoteByBook(bookId);
+    public ResponseEntity<List<Rating>> recommendQuotesByBook(@PathVariable Integer bookId) {
+        List<Rating> quotes = recommendationService.recommendQuoteByBook(bookId);
         if (quotes == null || quotes.isEmpty()) {
             return ResponseEntity.noContent().build(); // Возвращаем 204, если нет цитат
         }

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ttv.poltoraha.pivka.entity.*;
 import ttv.poltoraha.pivka.repository.BookRepository;
+import ttv.poltoraha.pivka.repository.RatingRepository;
 import ttv.poltoraha.pivka.repository.ReaderRepository;
 import ttv.poltoraha.pivka.repository.ReadingRepository;
 import ttv.poltoraha.pivka.service.AuthorService;
@@ -17,7 +18,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -30,6 +30,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     private final AuthorService authorService;
     private final BookRepository bookRepository;
     private final ReadingRepository readingRepository;
+    private final RatingRepository ratingRepository;
 
     /**
      * Чё делает метод и чё он должен делать:
@@ -139,22 +140,22 @@ public class RecommendationServiceImpl implements RecommendationService {
      * @return список подходящих цитат для определённой книги
      */
     @Override
-    public List<Quote> recommendQuoteByBook(Integer book_id) {
+    public List<Rating> recommendQuoteByBook(Integer book_id) {
         if (!bookRepository.existsById(book_id)) {
             throw new EntityNotFoundException(String.format("Entity book with id = %s was not found", book_id));
         }
 
-        val readings = readingRepository.findAllByBook_id(book_id);
+        // Получаем все цитаты для данной книги
+        List<Rating> quotes = ratingRepository.findByQuote_Book(bookRepository.findById(book_id).orElseThrow());
 
-        val topReader = readings.stream()
-                .map(Reading::getReader)
-                .sorted(Comparator.comparingInt(reader -> reader.getReadings().size()))
-                .limit(5)
-                .toList();
-
-        return topReader.stream()
-                .flatMap(reader -> reader.getQuotes().stream())
-                .filter(quote -> Objects.equals(quote.getBook().getId(), book_id))
+        // Сортируем цитаты по рейтингу и выбираем 5 самых высоких
+        return quotes.stream()
+                .sorted(Comparator.comparingInt(quote ->
+                        ratingRepository.findByQuote((Quote) quote).stream()
+                                .mapToInt(Rating::getValue)
+                                .sum() // Суммируем все рейтинги для каждой цитаты
+                ).reversed()) // Сортируем по убыванию
+                .limit(5) // Берем только 5 самых высоких
                 .toList();
     }
 }
